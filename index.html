@@ -49,11 +49,21 @@
         }
       });
       const data = await readResponse(response);
+      if (data.kind === "password_reset") {
+        message.textContent =
+          "Yêu cầu đặt lại mật khẩu cho số " + data.phone +
+          " đang chờ xác nhận.";
+        document.getElementById("verification").textContent =
+          "Chỉ xác nhận nếu bạn đã tự xác minh đúng người yêu cầu. Mật khẩu mới được mã hóa và không hiển thị cho bạn.";
+        button.textContent = "Xác nhận đặt lại mật khẩu";
+      }
       document.getElementById("phone").textContent = data.phone;
       document.getElementById("phone-row").hidden = false;
       document.getElementById("verification").hidden = false;
       button.hidden = false;
-      message.textContent = "Yêu cầu cấp quyền đang chờ xác nhận.";
+      if (data.kind !== "password_reset") {
+        message.textContent = "Yêu cầu cấp quyền đang chờ xác nhận.";
+      }
     }
 
     button.addEventListener("click", async () => {
@@ -73,8 +83,11 @@
         document.getElementById("phone-row").hidden = true;
         document.getElementById("verification").hidden = true;
         button.hidden = true;
-        message.textContent = "Đã cấp quyền cho " + data.phone +
-          ". Người dùng có thể đăng nhập bằng số điện thoại và mật khẩu đã đặt.";
+        message.textContent = data.kind === "password_reset"
+          ? "Đã đặt lại mật khẩu cho " + data.phone +
+            ". Người dùng có thể đăng nhập bằng mật khẩu mới."
+          : "Đã cấp quyền cho " + data.phone +
+            ". Người dùng có thể đăng nhập bằng số điện thoại và mật khẩu đã đặt.";
       } catch (error) {
         message.textContent = error.message;
         button.disabled = false;
