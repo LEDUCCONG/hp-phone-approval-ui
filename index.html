@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Duyệt quyền Huy Phát</title>
+  <style>
+    body {
+      color: #202124;
+      font: 16px "Segoe UI", Arial, sans-serif;
+      margin: 48px auto;
+      max-width: 620px;
+      padding: 0 20px;
+    }
+    button { cursor: pointer; font: inherit; padding: 10px 18px; }
+    button:disabled { cursor: wait; }
+    #message { margin: 24px 0; }
+  </style>
+</head>
+<body>
+  <h1>Huy Phát Construction</h1>
+  <p id="message">Đang kiểm tra yêu cầu cấp quyền…</p>
+  <p id="phone-row" hidden>Số điện thoại: <strong id="phone"></strong></p>
+  <p id="verification" hidden>Chỉ xác nhận nếu bạn đã tự kiểm tra đúng người và số điện thoại.</p>
+  <button id="approve" type="button" hidden>Xác nhận cấp quyền</button>
+  <script>
+    const endpoint = "https://mcahsdlvdadrhttvkfij.supabase.co/functions/v1/approve-phone-access";
+    const token = new URLSearchParams(location.hash.slice(1)).get("token") || "";
+    const message = document.getElementById("message");
+    const button = document.getElementById("approve");
+    history.replaceState(null, "", location.pathname + location.search);
+
+    async function readResponse(response) {
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Không thể xử lý yêu cầu.");
+      return data;
+    }
+
+    async function loadRequest() {
+      if (!/^[0-9a-f]{64}$/.test(token)) {
+        throw new Error("Liên kết duyệt không hợp lệ.");
+      }
+      const response = await fetch(endpoint + "?details=1", {
+        cache: "no-store",
+        headers: {
+          "Accept": "application/json",
+          "X-Approval-Token": token
+        }
+      });
+      const data = await readResponse(response);
+      document.getElementById("phone").textContent = data.phone;
+      document.getElementById("phone-row").hidden = false;
+      document.getElementById("verification").hidden = false;
+      button.hidden = false;
+      message.textContent = "Yêu cầu cấp quyền đang chờ xác nhận.";
+    }
+
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      message.textContent = "Đang cấp quyền…";
+      try {
+        const response = await fetch(endpoint, {
+          method: "POST",
+          cache: "no-store",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+          },
+          body: JSON.stringify({ action: "approve", token })
+        });
+        const data = await readResponse(response);
+        document.getElementById("phone-row").hidden = true;
+        document.getElementById("verification").hidden = true;
+        button.hidden = true;
+        message.textContent = "Đã cấp quyền cho " + data.phone +
+          ". Người dùng có thể đăng nhập bằng số điện thoại và mật khẩu đã đặt.";
+      } catch (error) {
+        message.textContent = error.message;
+        button.disabled = false;
+      }
+    });
+
+    loadRequest().catch((error) => {
+      message.textContent = error.message;
+      button.hidden = true;
+    });
+  </script>
+</body>
+</html>
